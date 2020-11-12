@@ -48,9 +48,12 @@ public class Server {
 
 
 
-    private void CheckExecCommand(String message) {
+    private void CheckExecCommand(String message)  {
+        String cmd =" ";
         if (message.endsWith("\\n")||message.endsWith("\\r\\n")) {
-            String cmd = message.substring(0, message.length() - 2);
+            if (message.endsWith("\\n"))cmd = message.substring(0,message.length()-2);
+            if (message.endsWith("\\r\\n"))cmd = message.substring(0,message.length()-4);
+
             switch (cmd) {
 
                 case "download":{
@@ -149,20 +152,25 @@ public class Server {
 
     }
 
-    public void cmd_accept_upload(){
-        client_descriptor.acceptUpload();
+    public void cmd_accept_download()  {
+
+        System.out.println("cmd_accept_download");
         String fileName = client_descriptor.get_message();
-        long fileSize= Long.valueOf(client_descriptor.get_message());
         System.out.println(fileName);
-        System.out.println(fileSize);
-        client_descriptor.downloadFile(fileName,fileSize);
-        client_descriptor.send_message("File was successfully uploaded");
+        client_descriptor.start_upload_file(fileName);
+        System.out.println("b1");
+        client_descriptor.send_message("vse");
+        System.out.println("b2");
+       // client_descriptor.send_message("File was successfully downloaded");
     }
 
-    public void cmd_accept_download()
-    {
+    public void cmd_accept_upload()  {
+        System.out.println ("cmd_accept_upload");
         String fileName = client_descriptor.get_message();
-        client_descriptor.acceptDownload(fileName);
+        client_descriptor.start_download_file(fileName);
+        System.out.println("a1");
+        client_descriptor.send_message("File was successfully uploaded");
+        System.out.println("a2");
     }
 
 }
