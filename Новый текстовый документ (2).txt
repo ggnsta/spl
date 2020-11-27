@@ -2,7 +2,7 @@ import java.io.*;
 
 public class FileTransmitter {
     protected static final int defaultPacketSize = 8192;
-    private static final Integer TIME_TO_WAIT_IN_MILLIS =1000; //16384;
+    private static final Integer TIME_TO_WAIT_IN_MILLIS =2000; //16384;
 
     public static int calculatePacketSize(Long FileSize)//высчитавает размер массива,который будет передаватсья за раз
     {
@@ -22,14 +22,12 @@ public class FileTransmitter {
             int packetSize= calculatePacketSize(fileSize);
             int numOfPacket = calculateNumOfPacket(fileSize);
             byte[] fileByteArray = new byte[packetSize];
-
             FileOutputStream fos = new FileOutputStream(file);
             BufferedOutputStream bos = new BufferedOutputStream(fos);
-
             long startTime = System.currentTimeMillis();
             for(int i=startAt; i <numOfPacket;i++)
             {
-                if (!waitForBytes(from)) {
+                if (!waitForDownload(from)) {
                     break;
                 }
                 if (i==numOfPacket-1)
@@ -37,15 +35,15 @@ public class FileTransmitter {
                     packetSize=adaptPacketSize(numOfPacket, fileSize);
                 }
                 from.read(fileByteArray,0,packetSize);
+                to.writeInt(i);
                 bos.write(fileByteArray,0,packetSize);
                 bos.flush();
-                to.writeUTF(i+" done");//
                 System.out.println("D Send: " + (100 * i / numOfPacket) + "%" + i);
-                to.writeInt(i);
+
             }
-            long endTime = System.currentTimeMillis();
-            System.out.println(endTime-startTime + " ms");
-            System.out.println((fileSize/1000000)/(((endTime-startTime))/1000)+"Mb/s");
+            bos.close();
+            fos.close();
+            calclulateSpeed(startTime,fileSize);
 
         }catch (Exception x){
             x.printStackTrace();
@@ -71,26 +69,13 @@ public class FileTransmitter {
                     bis.read(fileByteArray,0,packetSize);
                     to.write(fileByteArray);
                     to.flush();
-
-                    String check = " ";//
-                    check = from.readUTF();
-                    System.out.println(check);
-                    while(!(check.equals(i+" done"))) {//
-                        Thread.sleep(100);//
-                        System.out.println("!!!!!!!!!!!!!!!!!");
-                        check= from.readUTF();
-                    }
-
                     System.out.println("u Send: " + (100 * i / numOfPacket) + "%" + i);
-                    if (!waitForBytes(from)) {
+                    if (!waitForUpload(from,i)) {
                         break;
                     }
 
-                    while (from.readInt()!=i)
-                        System.out.println("*******");
-
-
                 }
+                bis.close();
 
             }
 
@@ -104,10 +89,11 @@ public class FileTransmitter {
         int newByteArraySize = (int) (fileSize - (defaultPacketSize*(NumOfPacket-1)));
         return newByteArraySize;
     }
-    private static boolean waitForBytes(DataInputStream fromClient) throws IOException {
+
+    private static boolean waitForDownload(DataInputStream fromClient) throws IOException {
         long startTime = System.currentTimeMillis();
         long endTime = startTime;
-        while (fromClient.available() <= 0) {
+        while (fromClient.available() < defaultPacketSize) {
             endTime = System.currentTimeMillis();
             if (endTime - startTime >= TIME_TO_WAIT_IN_MILLIS) {
                 System.out.println("OUT OF TIME WAITING (" + Thread.currentThread().getId() + ")");
@@ -115,6 +101,27 @@ public class FileTransmitter {
             }
         }
         return true;
+    }
+    private static boolean waitForUpload(DataInputStream fromClient,int i) throws IOException {
+        long startTime = System.currentTimeMillis();
+        long endTime = startTime;
+        while (fromClient.readInt()!=i) {
+            endTime = System.currentTimeMillis();
+            if (endTime - startTime >= TIME_TO_WAIT_IN_MILLIS) {
+                System.out.println("OUT OF TIME WAITING (" + Thread.currentThread().getId() + ")");
+                return false;
+            }
+        }
+        return true;
+    }
+    private static void calclulateSpeed(long startTime, long fileSize)
+    {
+        long endTime = System.currentTimeMillis();
+        System.out.println("downloaded in" + (endTime-startTime) + " ms");
+        long fileSizeInMb = fileSize/1000000;
+        long timeInSec = (endTime-startTime)/1000;
+        if(timeInSec<1)timeInSec=1;
+        System.out.println((fileSizeInMb/timeInSec)+"Mb/s");
     }
 
 }
