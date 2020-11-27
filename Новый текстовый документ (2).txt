@@ -1,8 +1,11 @@
 import java.io.*;
+import java.nio.channels.FileChannel;
 
 public class FileTransmitter {
     protected static final int defaultPacketSize = 8192;
     private static final Integer TIME_TO_WAIT_IN_MILLIS =2000; //16384;
+
+
 
     public static int calculatePacketSize(Long FileSize)//высчитавает размер массива,который будет передаватсья за раз
     {
@@ -17,6 +20,7 @@ public class FileTransmitter {
     }
     public static int requestDownload(DataInputStream from, DataOutputStream to, int startAt, String fileName, Long fileSize)
     {
+        int i = 0;
         try{
             File file = new File (fileName);
             int packetSize= calculatePacketSize(fileSize);
@@ -25,9 +29,19 @@ public class FileTransmitter {
             FileOutputStream fos = new FileOutputStream(file);
             BufferedOutputStream bos = new BufferedOutputStream(fos);
             long startTime = System.currentTimeMillis();
-            for(int i=startAt; i <numOfPacket;i++)
+
+            for( i=startAt; i <numOfPacket;i++)
             {
+                if(startAt!=0)
+                {
+                    FileChannel fc = null;
+                    fc=fos.getChannel();
+                    fc.position(startAt*defaultPacketSize);
+                }
+
+
                 if (!waitForDownload(from)) {
+                    System.out.println("pizdec "+ i);
                     return i;
                //     break;
                 }
@@ -45,15 +59,17 @@ public class FileTransmitter {
             bos.close();
             fos.close();
             calclulateSpeed(startTime,fileSize);
-            return -1;
+
 
         }catch (Exception x){
-            x.printStackTrace();
-        }
 
+            return i;
+        }
+        return -1;
     }
     public static int requestUpload (DataInputStream from, DataOutputStream to, int startAt, String fileName)
     {
+        int i = 0;
         try{
             File file = new File(fileName);
             if (!fileName.trim().isEmpty() && file.exists()) {
@@ -61,8 +77,12 @@ public class FileTransmitter {
                 int numOfPacket= calculateNumOfPacket(file.length());
                 byte[]fileByteArray = new byte[(int)packetSize];
                 BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+                if(startAt!=0)
+                {
+                    bis.skipNBytes(startAt*defaultPacketSize);
+                }
 
-                for(int i=startAt; i <numOfPacket;i++)
+                for( i=startAt; i <numOfPacket;i++)
                 {
                     if (i==numOfPacket-1)
                     {
@@ -73,20 +93,19 @@ public class FileTransmitter {
                     to.flush();
                     System.out.println("u Send: " + (100 * i / numOfPacket) + "%" + i);
                     if (!waitForUpload(from,i)) {
+                        System.out.println("pizdec "+ i);
                         return i;
                       //  break;
                     }
 
                 }
                 bis.close();
-                return -1;
-
             }
 
         }catch (Exception x){
-            x.printStackTrace();
+            return i;
         }
-
+        return -1;
     }
     private static int adaptPacketSize(int NumOfPacket,Long fileSize)
     {
