@@ -15,7 +15,7 @@ public class FileTransmitter {
         return numOfPacket;
 
     }
-    public static void requestDownload(DataInputStream from, DataOutputStream to, int startAt, String fileName, Long fileSize)
+    public static int requestDownload(DataInputStream from, DataOutputStream to, int startAt, String fileName, Long fileSize)
     {
         try{
             File file = new File (fileName);
@@ -28,7 +28,8 @@ public class FileTransmitter {
             for(int i=startAt; i <numOfPacket;i++)
             {
                 if (!waitForDownload(from)) {
-                    break;
+                    return i;
+               //     break;
                 }
                 if (i==numOfPacket-1)
                 {
@@ -44,13 +45,14 @@ public class FileTransmitter {
             bos.close();
             fos.close();
             calclulateSpeed(startTime,fileSize);
+            return -1;
 
         }catch (Exception x){
             x.printStackTrace();
         }
 
     }
-    public static void requestUpload (DataInputStream from, DataOutputStream to, int startAt, String fileName)
+    public static int requestUpload (DataInputStream from, DataOutputStream to, int startAt, String fileName)
     {
         try{
             File file = new File(fileName);
@@ -71,11 +73,13 @@ public class FileTransmitter {
                     to.flush();
                     System.out.println("u Send: " + (100 * i / numOfPacket) + "%" + i);
                     if (!waitForUpload(from,i)) {
-                        break;
+                        return i;
+                      //  break;
                     }
 
                 }
                 bis.close();
+                return -1;
 
             }
 
@@ -90,27 +94,38 @@ public class FileTransmitter {
         return newByteArraySize;
     }
 
-    private static boolean waitForDownload(DataInputStream fromClient) throws IOException {
-        long startTime = System.currentTimeMillis();
-        long endTime = startTime;
-        while (fromClient.available() < defaultPacketSize) {
-            endTime = System.currentTimeMillis();
-            if (endTime - startTime >= TIME_TO_WAIT_IN_MILLIS) {
-                System.out.println("OUT OF TIME WAITING (" + Thread.currentThread().getId() + ")");
-                return false;
+    private static boolean waitForDownload(DataInputStream fromClient) {
+        try {
+            long startTime = System.currentTimeMillis();
+            long endTime = startTime;
+            while (fromClient.available() < defaultPacketSize) {
+                endTime = System.currentTimeMillis();
+                if (endTime - startTime >= TIME_TO_WAIT_IN_MILLIS) {
+                    System.out.println("OUT OF TIME WAITING (" + Thread.currentThread().getId() + ")");
+                    return false;
+                }
             }
+        }catch (Exception ex)
+        {
+            System.out.println("Обрыв соединения");
+            return false;
         }
         return true;
     }
-    private static boolean waitForUpload(DataInputStream fromClient,int i) throws IOException {
-        long startTime = System.currentTimeMillis();
-        long endTime = startTime;
-        while (fromClient.readInt()!=i) {
-            endTime = System.currentTimeMillis();
-            if (endTime - startTime >= TIME_TO_WAIT_IN_MILLIS) {
-                System.out.println("OUT OF TIME WAITING (" + Thread.currentThread().getId() + ")");
-                return false;
+    private static boolean waitForUpload(DataInputStream fromClient,int i)  {
+        try {
+            long startTime = System.currentTimeMillis();
+            long endTime = startTime;
+            while (fromClient.readInt() != i) {
+                endTime = System.currentTimeMillis();
+                if (endTime - startTime >= TIME_TO_WAIT_IN_MILLIS) {
+                    System.out.println("OUT OF TIME WAITING (" + Thread.currentThread().getId() + ")");
+                    return false;
+                }
             }
+        }catch (Exception ex){
+            System.out.println("Обрыв соединения");
+            return false;
         }
         return true;
     }
