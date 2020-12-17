@@ -2,7 +2,7 @@ import java.io.*;
 import java.nio.channels.FileChannel;
 
 public class FileTransmitter {
-    protected static final int defaultPacketSize = 65507;
+    protected static final int defaultPacketSize =4096; //65507;
     private static final Integer TIME_TO_WAIT_IN_MILLIS =2000; //16384;
 
 

@@ -6,8 +6,8 @@ import java.nio.ByteBuffer;
 
 public class UDPTransmitter {
 
-    protected static final int defaultPacketSize = 65507;
-    private static final Integer TIME_TO_WAIT_IN_MILLIS =200000; //16384;
+    protected static final int defaultPacketSize = 32768;//65507;
+    private static final Integer TIME_TO_WAIT_IN_MILLIS =2000; //16384;
     private static int window_size = 3;
 
     public static int calculatePacketSize(Long FileSize)//высчитавает размер массива,который будет передаватсья за раз
@@ -44,9 +44,12 @@ public class UDPTransmitter {
                 bos.write(receivingDataBuffer,0,packetSize);
                 System.out.println("D Send: " + (100 * i / numOfPacket) + "%" + i);
             }
+            bos.close();
+            fos.close();
             FileTransmitter.calclulateSpeed(startTime,fileSize);
         }catch (Exception ex){
-            ex.printStackTrace();
+            return i;
+            //ex.printStackTrace();
         }
         return -1;//
     }
@@ -80,10 +83,11 @@ public class UDPTransmitter {
                     }
 
                 }
+                bis.close();
                 System.out.println("finish");
             }
         }catch (Exception x){
-            x.printStackTrace();
+            return i;
         }
         return -1;
     }
